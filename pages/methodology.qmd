@@ -1,0 +1,83 @@
+---
+title: "Methodology"
+subtitle: "How the charts are computed, in the smallest number of steps that preserve honesty."
+---
+
+## Guiding principle
+
+This site is a **measurement** project, not a causal one. It does not claim the
+2026 Iran-US war *caused* any particular move in the charts; it shows what the
+most transparent public indicators did over a window in which the war is the
+dominant news event. Everything on the main page is derivable from the data
+committed to the [repository](https://github.com/pmxlr8/DS_R_Geopolitics).
+
+## Intellectual framing
+
+The framing borrows openly from the DHL Initiative on Globalization's
+[Global Connectedness Index](https://www.stern.nyu.edu/experience-stern/about/departments-centers-initiatives/centers-of-research/center-future-management/dhl-initiative-globalization)
+(Ghemawat & Altman). The real index aggregates four flows — trade, capital,
+information, people — into a *depth* score and a *breadth* score. Here we use
+a simplified depth-of-trade score so the full computation fits on one page:
+
+$$
+\text{depth}_{c,t} = \frac{\text{exports}_{c,t} + \text{imports}_{c,t}}{\text{GDP}_{c,t}}
+$$
+
+computed directly from World Bank WDI indicator
+`NE.TRD.GNFS.ZS`.
+
+## The shock score
+
+For each country we compute a baseline from the five years preceding the shock:
+
+$$
+\mu_c = \overline{\text{depth}_{c, 2020..2024}}, \quad
+\sigma_c = \text{sd}(\text{depth}_{c, 2020..2024})
+$$
+
+and score the latest observation as a z-score:
+
+$$
+z_{c,t} = \frac{\text{depth}_{c,t} - \mu_c}{\sigma_c}
+$$
+
+A positive z-score means the country is trading *more* relative to GDP than its
+pre-war normal; a negative score means structural pullback. The implementation
+is ~30 lines of R in [`R/connectedness.R`](https://github.com/pmxlr8/DS_R_Geopolitics/blob/main/R/connectedness.R).
+
+## Oil prices
+
+Spot prices come from FRED:
+
+- `DCOILWTICO` — WTI, daily
+- `DCOILBRENTEU` — Europe Brent, daily
+
+We fetch them as CSV from the public `fredgraph.csv` endpoint — no API key, no
+rate limits that matter at our volume. The Brent-WTI spread is simply daily
+difference after pivoting the series wide.
+
+## Event annotations
+
+The war timeline lives in `data/events.yml`. Every entry has a date, a category
+(`kinetic`, `markets`, `diplomacy`, `sanctions`, `macro`), a short label, a
+detail, and a source. Keeping the timeline in YAML rather than embedding it
+inline makes each war milestone a reviewable pull request.
+
+## Data warehouse
+
+Everything lands in a single DuckDB file (`data/shock.duckdb`). DuckDB was
+chosen over SQLite because (a) the project is analytical — group-bys, window
+functions, joins over ~20k rows — and DuckDB is ~10–100× faster for that
+workload, (b) it reads Parquet natively if we ever grow, and (c) a single-file
+warehouse commits cleanly and fits the CI model perfectly.
+
+## What this project *cannot* tell you
+
+- Causal attribution. Trade and GDP data are annual and lagged; by the time we
+  see 2026 in WDI, the war will be history. For daily impact, the oil spread
+  is the sharpest indicator we have.
+- Capital, information, or people flows. The real DHL index spans all four;
+  this is a trade-only simplification.
+- Sub-country detail. Iran's shadow fleet, Chinese teapot refineries, and the
+  interior economics of Gulf transshipment are important stories that need
+  different data sources than the free public APIs this pipeline runs on.

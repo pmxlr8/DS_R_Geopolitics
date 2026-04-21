@@ -1,0 +1,48 @@
+---
+title: "Data sources"
+subtitle: "Every number on this site is traceable to a public source. Here they are."
+---
+
+## Quantitative sources
+
+| Source | Endpoint / Package | Indicator(s) | Refresh | Used in |
+|---|---|---|---|---|
+| World Bank Open Data (WDI) | [`api.worldbank.org/v2`](https://api.worldbank.org/v2/) via R pkg `WDI` | `NE.TRD.GNFS.ZS`, `NY.GDP.MKTP.CD`, `NE.EXP.GNFS.ZS`, `NE.IMP.GNFS.ZS` | Annual | Charts C & D |
+| FRED (St. Louis Fed) | `fredgraph.csv?id=...` | `DCOILWTICO`, `DCOILBRENTEU` | Daily | Charts A & B |
+
+No credentials are required for either endpoint. Both are snapshotted into
+`data/raw/` so a CI run with no network access will still render a site.
+
+## Qualitative / timeline sources
+
+The `data/events.yml` file aggregates reporting from the following outlets.
+Each individual event cites the publication it was sourced from.
+
+- Wikipedia: [2026 Iran war](https://en.wikipedia.org/wiki/2026_Iran_war),
+  [Economic impact of the 2026 Iran war](https://en.wikipedia.org/wiki/Economic_impact_of_the_2026_Iran_war),
+  [2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)
+- [Britannica — 2026 Iran war](https://www.britannica.com/event/2026-Iran-war)
+- CNBC ([Apr 21, 2026](https://www.cnbc.com/2026/04/21/oil-price-iran-war-strait-hormuz-tanker-ceasefire-peace-talks.html),
+  [Apr 20](https://www.cnbc.com/2026/04/20/us-iran-war-middle-east-conflict-peace-deal-strait-hormuz-shipping-ceasefire-tensions.html),
+  [Apr 15](https://www.cnbc.com/2026/04/15/here-are-all-the-ways-the-iran-war-has-affected-the-us-economy-so-far.html),
+  [Apr 12](https://www.cnbc.com/2026/04/12/oil-prices-iran-war-strait-hormuz-blockade.html))
+- [Al Jazeera — day 47 of the US-Iran conflict](https://www.aljazeera.com/news/2026/4/15/iran-war-what-is-happening-on-day-47-of-the-us-iran-conflict)
+- [TIME — IMF: global recession warning](https://time.com/article/2026/04/15/imf-global-recession-war-us-israel-iran-energy-hormuz/)
+- [Oxford Economics — 2026 conflict analysis](https://www.oxfordeconomics.com/iran-conflict-us-israel-iran-war-2026/)
+- [Dallas Fed working paper on inflation impact](https://www.dallasfed.org/~/media/documents/research/papers/2026/wp2609.pdf)
+
+## Intellectual lineage
+
+Framing and terminology lean on the published work of the DHL Initiative on
+Globalization at NYU Stern, in particular the Global Connectedness Report
+series and the Trade Atlas. See the
+[Initiative's publications page](https://www.stern.nyu.edu/experience-stern/about/departments-centers-initiatives/centers-of-research/center-future-management/dhl-initiative-globalization/publications).
+
+## Reproducibility
+
+The exact computations behind every figure live in
+[`index.qmd`](https://github.com/pmxlr8/DS_R_Geopolitics/blob/main/index.qmd),
+with derived tables in [`sql/`](https://github.com/pmxlr8/DS_R_Geopolitics/tree/main/sql)
+and helper functions in [`R/`](https://github.com/pmxlr8/DS_R_Geopolitics/tree/main/R).
+Re-running `Rscript setup.R && Rscript build_db.R && quarto render` on a clean
+checkout reproduces this site end-to-end.

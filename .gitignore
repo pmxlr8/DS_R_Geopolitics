@@ -1,0 +1,26 @@
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# Quarto
+/.quarto/
+/_site/
+/_freeze/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Secrets
+.env
+.Renviron
+
+# Generated warehouse — rebuilt by build_db.R on every CI run
+data/shock.duckdb

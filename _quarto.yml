@@ -1,0 +1,55 @@
+project:
+  type: website
+  output-dir: _site
+  # Run every chunk from the project root so source("R/...") works from
+  # both index.qmd and pages/*.qmd without relative-path gymnastics.
+  execute-dir: project
+  render:
+    - index.qmd
+    - pages/*.qmd
+
+website:
+  title: "Hormuz Shock Tracker"
+  description: "An open, reproducible view of the 2026 Iran–US war through the lens of global connectedness."
+  site-url: https://pmxlr8.github.io/DS_R_Geopolitics
+  repo-url: https://github.com/pmxlr8/DS_R_Geopolitics
+  repo-actions: [edit, issue]
+  page-navigation: true
+  navbar:
+    background: primary
+    left:
+      - href: index.qmd
+        text: Home
+      - href: pages/historical_analogs.qmd
+        text: Historical analogs
+      - href: pages/methodology.qmd
+        text: Methodology
+      - href: pages/data_sources.qmd
+        text: Data sources
+    right:
+      - icon: github
+        href: https://github.com/pmxlr8/DS_R_Geopolitics
+        aria-label: GitHub
+  page-footer:
+    left: "Built by Bhavesh Gupta · data from World Bank, FRED, UN Comtrade, IMF"
+    right: "Last refresh: `r Sys.Date()`"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    code-link: true
+    fig-width: 9
+    fig-height: 5
+    fig-align: center
+    smooth-scroll: true
+    link-external-newwindow: true
+
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto

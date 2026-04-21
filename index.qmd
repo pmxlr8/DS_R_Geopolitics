@@ -1,0 +1,256 @@
+---
+title: "Hormuz Shock Tracker"
+subtitle: "Reading the 2026 Iran–US war through the DHL Global Connectedness lens"
+author: "Bhavesh Gupta"
+date: last-modified
+date-format: "D MMMM YYYY"
+format:
+  html:
+    code-fold: true
+    fig-width: 9
+    fig-height: 5
+abstract: |
+  On 28 February 2026 the United States and Israel struck Iranian nuclear and
+  missile infrastructure. Within 48 hours the Strait of Hormuz — carrier of
+  roughly one fifth of global crude and a large share of LNG — was closed to
+  commercial traffic. Brent broke $100 per barrel within ten days. This site
+  tracks the ongoing economic shock the way the DHL Initiative on Globalization
+  tracks connectedness: empirically, reproducibly, and in a form a policymaker
+  can read in five minutes. Every figure is generated from an open data pipeline
+  (R + DuckDB + Quarto); the warehouse and the CI workflow that refreshes it
+  are in the [GitHub repository](https://github.com/pmxlr8/DS_R_Geopolitics).
+---
+
+```{r setup}
+#| include: false
+suppressPackageStartupMessages({
+  library(DBI)
+  library(duckdb)
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+  library(scales)
+  library(plotly)
+  library(readr)
+  library(lubridate)
+})
+source("R/db_helpers.R")
+source("R/connectedness.R")
+
+con <- db_connect(read_only = TRUE)
+
+events <- db_read(con, "SELECT * FROM events ORDER BY date")
+prices <- db_read(con, "SELECT * FROM v_price_shock ORDER BY date")
+depth  <- db_read(con, "SELECT * FROM v_trade_depth ORDER BY iso3c, year")
+
+# War start marker used across charts.
+WAR_START <- as.Date("2026-02-28")
+
+theme_shock <- function() {
+  theme_minimal(base_size = 13) +
+    theme(
+      plot.title    = element_text(face = "bold"),
+      plot.subtitle = element_text(color = "grey30"),
+      panel.grid.minor = element_blank(),
+      legend.position = "top",
+      legend.title    = element_blank()
+    )
+}
+```
+
+## The shock, in one paragraph
+
+Crude oil traded near $70 a barrel before the strikes. By 8 March 2026, Brent
+broke $100 for the first time in four years; during the blockade peak it spiked
+above $119. The IMF cut its 2026 MENA growth forecast from 3.9% to 1.1% and
+warned that continued escalation could push the global economy into recession.
+As of this writing (`r format(Sys.Date(), "%e %B %Y")`), the two-week
+US–Iran–Israel ceasefire signed on 7 April is fraying: Iran has cancelled the
+reopening of the Strait, and the US blockade of Iranian ports remains in force.
+
+The rest of this page traces that shock through four measurements.
+
+---
+
+## Chart A — The spike
+
+> Daily WTI and Brent spot prices, with hand-curated war-timeline annotations.
+> The question this chart answers: *how fast did markets price the shock, and
+> how does this spike compare to earlier episodes on the same window?*
+
+```{r chart-a}
+#| label: chart-a-spike
+#| fig-cap: "WTI and Brent spot prices, 2022-present. Dashed line marks the 28 Feb 2026 strikes."
+
+market_events <- events |>
+  filter(category %in% c("kinetic", "markets", "diplomacy"),
+         date >= as.Date("2026-02-01")) |>
+  arrange(date) |>
+  slice_head(n = 6)
+
+p <- ggplot(prices, aes(x = date, y = usd_per_bbl, color = series)) +
+  geom_line(linewidth = 0.6) +
+  geom_vline(xintercept = as.numeric(WAR_START),
+             linetype = "dashed", color = "grey40") +
+  scale_y_continuous(labels = dollar_format(suffix = "/bbl")) +
+  scale_color_manual(values = c(WTI = "#2C7FB8", Brent = "#D95F02")) +
+  labs(title = "Oil prices: the 2026 Iran-war spike",
+       subtitle = "WTI and Brent daily spot (USD/bbl)",
+       x = NULL, y = NULL) +
+  theme_shock()
+
+ggplotly(p, tooltip = c("x", "y", "colour")) |>
+  layout(legend = list(orientation = "h", y = 1.05))
+```
+
+The picture tells two stories. The first is the sheer speed: Brent added roughly
+forty dollars in the first six trading sessions of March — faster than after
+Russia's 2022 invasion of Ukraine on the same axis. The second is the tail:
+prices remained above the pre-war range into the April ceasefire, indicating
+that markets were pricing not only the blockade but the probability it would
+resume.
+
+---
+
+## Chart B — The geopolitical risk premium
+
+> The Brent–WTI spread is a classic read of Middle East risk: Brent prices
+> Hormuz-adjacent crude; WTI prices US crude. When the spread widens, markets
+> are charging extra for geopolitical exposure.
+
+```{r chart-b}
+#| label: chart-b-spread
+#| fig-cap: "Brent minus WTI spot spread, USD/bbl. A widening spread = a wider risk premium on Hormuz-adjacent crude."
+
+spread <- prices |>
+  pivot_wider(names_from = series, values_from = usd_per_bbl) |>
+  filter(!is.na(Brent), !is.na(WTI)) |>
+  mutate(spread = Brent - WTI)
+
+p <- ggplot(spread, aes(x = date, y = spread)) +
+  geom_hline(yintercept = 0, color = "grey70") +
+  geom_line(color = "#7B3294", linewidth = 0.6) +
+  geom_vline(xintercept = as.numeric(WAR_START),
+             linetype = "dashed", color = "grey40") +
+  scale_y_continuous(labels = dollar_format(suffix = "/bbl")) +
+  labs(title = "The geopolitical risk premium",
+       subtitle = "Brent minus WTI, daily",
+       x = NULL, y = NULL) +
+  theme_shock()
+
+ggplotly(p, tooltip = c("x", "y"))
+```
+
+A normal Brent-WTI spread sits in the low single digits, reflecting quality and
+logistics. During the 2026 shock it widened sharply as Hormuz-adjacent supply
+became harder to replace. For policymakers the spread is a cleaner read than
+the absolute price, because it strips out demand-side noise and leaves the
+geography-of-supply story exposed.
+
+---
+
+## Chart C — The rewiring
+
+> Trade depth (exports + imports as a share of GDP) for a panel of major
+> economies. A Ghemawat-style connectedness question: *who is most exposed,
+> structurally, to a Middle East chokepoint?*
+
+```{r chart-c}
+#| label: chart-c-rewiring
+#| fig-cap: "Trade (% of GDP), 2000-2024. Source: World Bank WDI indicator NE.TRD.GNFS.ZS."
+
+focus <- c("IRN", "SAU", "ARE", "TUR", "DEU", "CHN", "USA", "IND", "EUU")
+
+panel <- depth |>
+  filter(iso3c %in% focus) |>
+  mutate(country = factor(country,
+                          levels = c("Iran, Islamic Rep.", "Saudi Arabia",
+                                     "United Arab Emirates", "Turkiye",
+                                     "Germany", "China", "United States",
+                                     "India", "European Union")))
+
+p <- ggplot(panel, aes(x = year, y = trade_depth_pct,
+                       color = country, group = country)) +
+  geom_line(linewidth = 0.6) +
+  scale_y_continuous(labels = percent_format(scale = 1)) +
+  scale_color_brewer(palette = "Set1") +
+  labs(title = "Trade depth by economy, 2000–2024",
+       subtitle = "Trade (goods + services) as % of GDP",
+       x = NULL, y = NULL) +
+  theme_shock() +
+  theme(legend.position = "right", legend.title = element_blank())
+
+ggplotly(p, tooltip = c("x", "y", "colour"))
+```
+
+Three groups sit in different positions on this chart. Gulf economies (UAE,
+Saudi Arabia) trade at 60–200% of GDP — their exposure is structural. Large
+continental blocs (US, China, India) trade at 20–40% — exposure is real but
+buffered by domestic demand. The European Union sits in between. A Hormuz
+shock does not hit everyone the same way; the chart makes *semi-globalization*
+— Ghemawat's observation that the world is neither fully flat nor fully local
+— visible on one axis.
+
+---
+
+## Chart D — The connectedness score
+
+> A z-score of each economy's most recent trade depth against its own pre-war
+> baseline (five-year mean ending 2024). Above zero = more connected than
+> baseline; below zero = decoupling underway.
+
+```{r chart-d}
+#| label: chart-d-score
+#| fig-cap: "Connectedness shock score (z-score vs. 2020–2024 baseline)."
+
+scored <- depth |>
+  shock_score(baseline_end = 2024, baseline_years = 5) |>
+  filter(iso3c %in% focus, year == max(year)) |>
+  arrange(shock_z) |>
+  mutate(country = factor(country, levels = country))
+
+p <- ggplot(scored, aes(x = country, y = shock_z,
+                        fill = shock_z > 0)) +
+  geom_col() +
+  scale_fill_manual(values = c(`TRUE` = "#2C7FB8", `FALSE` = "#D95F02"),
+                    guide = "none") +
+  coord_flip() +
+  labs(title = "Who is above or below their pre-war connectedness baseline?",
+       subtitle = "Standard deviations from 2020–2024 trade-depth mean, latest WDI year",
+       x = NULL, y = "z-score") +
+  theme_shock()
+
+ggplotly(p, tooltip = c("x", "y"))
+```
+
+The bar chart compresses the four-chart story into one line-per-country read.
+Economies pushed below zero are already registering a structural pullback from
+trade. Those above zero are either late to reflect the shock in annual data or
+benefiting from reconfiguration (e.g., transshipment winners).
+
+---
+
+## Timeline
+
+The event annotations used throughout this page are loaded from a
+version-controlled YAML file (`data/events.yml`) so the war itself is
+diff-able in git. Full table below.
+
+```{r timeline}
+#| echo: false
+events |>
+  mutate(date = format(date, "%Y-%m-%d")) |>
+  select(date, category, label, source) |>
+  knitr::kable(col.names = c("Date", "Category", "Event", "Source"))
+```
+
+```{r cleanup}
+#| include: false
+db_disconnect(con)
+```
+
+---
+
+*See also: [historical analogs](pages/historical_analogs.qmd) ·
+[methodology](pages/methodology.qmd) ·
+[data sources](pages/data_sources.qmd).*

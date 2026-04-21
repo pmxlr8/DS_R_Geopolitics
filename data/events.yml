@@ -1,0 +1,88 @@
+# Curated timeline of the 2026 Iran–US war.
+# Sources: Wikipedia, Britannica, CNBC, Al Jazeera, TIME, IMF, Dallas Fed (see pages/data_sources.qmd).
+# Hand-curated from public reporting — each entry has a short citation.
+# category: kinetic | diplomacy | markets | sanctions | macro
+
+- date: 2025-09-28
+  category: sanctions
+  label: "UN snapback sanctions reimposed on Iran"
+  detail: "JCPOA snapback triggered; China and Russia reject the move."
+  source: "UN / Atlantic Council"
+
+- date: 2026-02-24
+  category: diplomacy
+  label: "Trump SOTU: Iran restarted nuclear program"
+  detail: "State of the Union claims Iran developing missiles capable of striking the US."
+  source: "White House"
+
+- date: 2026-02-28
+  category: kinetic
+  label: "Joint US/Israel strikes begin"
+  detail: "Coordinated strikes on Iranian nuclear and missile infrastructure; war begins."
+  source: "Britannica / Wikipedia"
+
+- date: 2026-03-02
+  category: kinetic
+  label: "IRGC closes Strait of Hormuz"
+  detail: "Tanker traffic drops ~70%; ~150 ships anchor outside the strait."
+  source: "Wikipedia / CRS"
+
+- date: 2026-03-02
+  category: markets
+  label: "Brent +10–13% to ~$80–82"
+  detail: "Immediate oil-market reaction to the strait closure."
+  source: "CNBC / Oxford Economics"
+
+- date: 2026-03-08
+  category: markets
+  label: "Brent breaks $100 — first time in four years"
+  detail: "Supply-shock fears dominate; fastest conflict-driven rise in recent history."
+  source: "Wikipedia / PBS"
+
+- date: 2026-03-19
+  category: macro
+  label: "US war cost ~$18B; Pentagon requests +$200B"
+  detail: "Direct military outlays plus supplemental request."
+  source: "Wikipedia"
+
+- date: 2026-03-31
+  category: macro
+  label: "Arab-country war costs top $120B"
+  detail: "Regional economic damage accumulates alongside energy-export losses."
+  source: "Wikipedia"
+
+- date: 2026-04-07
+  category: diplomacy
+  label: "US–Iran–Israel two-week ceasefire agreed"
+  detail: "Temporary truce; blockade terms contested."
+  source: "CNN / CNBC"
+
+- date: 2026-04-11
+  category: macro
+  label: "Iran self-assessed war damage $300B–$1T"
+  detail: "Tehran estimates compound economic costs."
+  source: "Wikipedia"
+
+- date: 2026-04-15
+  category: macro
+  label: "IMF cuts 2026 MENA growth 3.9% → 1.1%"
+  detail: "Warns continued escalation could push the global economy into recession."
+  source: "TIME / IMF"
+
+- date: 2026-04-17
+  category: diplomacy
+  label: "Iran cancels Strait reopening"
+  detail: "Trump clarifies US blockade of Iranian ports remains in effect."
+  source: "CNBC"
+
+- date: 2026-04-19
+  category: diplomacy
+  label: "Trump sends negotiators to Pakistan"
+  detail: "Framed as Iran's 'last chance' to reach a deal before ceasefire expires."
+  source: "CNBC / CNN"
+
+- date: 2026-04-21
+  category: markets
+  label: "Ceasefire expiration looms; oil rallies"
+  detail: "Markets price renewed strike risk as truce window closes."
+  source: "CNBC"

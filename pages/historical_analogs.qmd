@@ -1,0 +1,98 @@
+---
+title: "Historical analogs"
+subtitle: "What did earlier oil-supply shocks look like on the same axes?"
+---
+
+```{r setup}
+#| include: false
+suppressPackageStartupMessages({
+  library(DBI); library(duckdb); library(dplyr); library(ggplot2)
+  library(scales); library(plotly); library(lubridate)
+})
+source("R/db_helpers.R")
+con <- db_connect(read_only = TRUE)
+prices <- db_read(con, "SELECT * FROM prices WHERE value IS NOT NULL ORDER BY date")
+db_disconnect(con)
+
+theme_shock <- function() {
+  theme_minimal(base_size = 13) +
+    theme(plot.title = element_text(face = "bold"),
+          plot.subtitle = element_text(color = "grey30"),
+          panel.grid.minor = element_blank(),
+          legend.position = "top",
+          legend.title = element_blank())
+}
+```
+
+## Why compare?
+
+Four episodes in the last half-century caused or threatened a major Hormuz-
+or Gulf-region oil-supply shock:
+
+| Year | Episode | Trigger |
+|---|---|---|
+| 1973–74 | OAPEC oil embargo | October war; Arab producers embargo US & allies |
+| 1979–80 | Iranian Revolution + Iran-Iraq war | Iranian output collapses; tanker war follows |
+| 1990–91 | Gulf War | Iraq invades Kuwait; brief Kuwaiti output disappearance |
+| 2022 | Ukraine war | Not Gulf, but closest recent oil-price analogue |
+
+FRED's Brent series begins in 1987, so the direct price comparison below is
+limited to 1990 onward. For 1973 and 1979, the comparison is qualitative
+(see Ghemawat & Altman's *Global Connectedness Report 2024* for quantitative
+treatment).
+
+## Brent across the last three shocks
+
+```{r analogs-brent}
+#| label: analogs-brent
+#| fig-cap: "Brent spot around each of the last three Gulf-related shocks. Days are relative to the shock start."
+
+anchors <- tibble::tibble(
+  shock     = c("1990 Gulf War", "2022 Ukraine war", "2026 Iran war"),
+  anchor    = as.Date(c("1990-08-02", "2022-02-24", "2026-02-28"))
+)
+
+windowed <- purrr::map2_dfr(
+  anchors$shock, anchors$anchor,
+  function(sh, a) {
+    prices |>
+      dplyr::filter(series == "Brent",
+                    date >= a - 60, date <= a + 90) |>
+      dplyr::mutate(shock = sh,
+                    day_offset = as.integer(date - a))
+  }
+)
+
+p <- ggplot(windowed, aes(x = day_offset, y = value, color = shock)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_line(linewidth = 0.7) +
+  scale_y_continuous(labels = dollar_format(suffix = "/bbl")) +
+  scale_color_manual(values = c("1990 Gulf War" = "#1b9e77",
+                                "2022 Ukraine war" = "#7570b3",
+                                "2026 Iran war" = "#d95f02")) +
+  labs(title = "Brent in the 150 days around each shock",
+       subtitle = "Day 0 = shock start; y-axis is nominal USD/bbl",
+       x = "Days from shock start", y = NULL) +
+  theme_shock()
+
+ggplotly(p, tooltip = c("x", "y", "colour"))
+```
+
+## Reading the chart
+
+Nominal prices are not directly comparable across episodes — 1990's forty
+dollars is a different shock than 2026's one hundred, once adjusted for
+CPI and for the structure of global oil demand. What *is* comparable on this
+axis is **shape**: how steep is the ramp, how persistent is the plateau, how
+fast is the reversal when diplomacy lands. On that reading, 2026 is closer to
+1990 than to 2022 — a sharp kinetic trigger with a price ramp that begins
+compressing only when a ceasefire is signalled, rather than the slower
+demand-led path of the Ukraine episode.
+
+## What an analog does not tell you
+
+Analogs compress complexity. The 1973 embargo happened in a world where oil
+was ~50% of OECD primary energy; today it is ~30%. The 1990 Kuwait shock was
+resolved in months; the 2022 Ukraine shock remains unresolved at year three.
+Whether 2026 rhymes with any of them is ultimately a policy question, not an
+econometric one.
