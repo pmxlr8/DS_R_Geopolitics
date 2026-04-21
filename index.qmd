@@ -3,7 +3,7 @@ title: "Hormuz Shock Tracker"
 subtitle: "Reading the 2026 Iran–US war through the DHL Global Connectedness lens"
 author: "Pranjal Mishra"
 date: last-modified
-date-format: "D MMMM YYYY, HH:mm 'UTC'"
+date-format: "D MMMM YYYY, HH:mm [UTC]"
 format:
   html:
     code-fold: true
@@ -85,7 +85,8 @@ stat_box <- function(label, value, sub = NULL) {
 div(style = "display:flex; flex-wrap:wrap; margin:16px -4px 24px -4px;",
   stat_box("Brent, latest",
            sprintf("$%.2f / bbl", latest_brent),
-           sub = format(latest_date, "%d %b %Y")),
+           sub = sprintf("FRED as of %s · ~1 wk publication lag",
+                         format(latest_date, "%d %b %Y"))),
   stat_box("Brent–WTI spread",
            sprintf("$%.2f", latest_spread),
            sub = "geopolitical risk premium"),
@@ -139,11 +140,12 @@ p <- ggplot(prices, aes(x = date, y = value, color = series,
 
 ggplotly(p, tooltip = "text") |>
   layout(shapes = list(war_shape), annotations = list(war_annot),
-         legend = list(orientation = "h", y = 1.08),
+         margin = list(t = 60),
+         legend = list(orientation = "v", x = 1.02, y = 1, xanchor = "left"),
          hovermode = "x unified")
 ```
 
-*Source: FRED — [`DCOILWTICO`](https://fred.stlouisfed.org/series/DCOILWTICO), [`DCOILBRENTEU`](https://fred.stlouisfed.org/series/DCOILBRENTEU) · daily refresh*
+*Source: FRED — [`DCOILWTICO`](https://fred.stlouisfed.org/series/DCOILWTICO), [`DCOILBRENTEU`](https://fred.stlouisfed.org/series/DCOILBRENTEU) · daily refresh from FRED's public CSV endpoint; FRED itself typically publishes spot prices with a 5–8 business-day lag.*
 
 The picture tells two stories. The first is speed: Brent added roughly forty
 dollars in the first six trading sessions of March — faster than after Russia's

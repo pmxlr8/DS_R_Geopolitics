@@ -33,6 +33,14 @@ website:
   page-footer:
     left: "Built by Pranjal Mishra · data from World Bank, FRED, UN Comtrade, IMF"
     right: "Last refresh: `r Sys.Date()`"
+  open-graph:
+    title: "Hormuz Shock Tracker"
+    description: "An open, reproducible view of the 2026 Iran–US war through the lens of global connectedness. Built with R, DuckDB, and Quarto."
+    locale: en_US
+  twitter-card:
+    title: "Hormuz Shock Tracker"
+    description: "Open, reproducible tracker of the 2026 Iran–US war's impact on global trade connectedness. R + DuckDB + Quarto, rebuilt daily."
+    card-style: summary_large_image
 
 format:
   html:
