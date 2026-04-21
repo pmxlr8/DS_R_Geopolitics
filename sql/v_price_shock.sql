@@ -4,9 +4,9 @@
 
 CREATE OR REPLACE VIEW v_price_shock AS
 SELECT
-    CAST(date AS DATE)   AS date,
+    CAST(date AS DATE)    AS date,
     series,
-    CAST(value AS DOUBLE) AS usd_per_bbl
+    CAST(value AS DOUBLE) AS value
 FROM prices
 WHERE date >= DATE '2022-01-01'
   AND value IS NOT NULL;

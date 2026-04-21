@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Author** | Bhavesh Gupta |
+| **Author** | Pranjal Mishra |
 | **Date** | 2026-04-21 |
 | **Target role** | Student Employee – Data Science Support, NYU Stern DHL Initiative on Globalization |
 | **Target reviewer** | Hiring manager, Center for the Future of Management (Ghemawat / Altman team) |

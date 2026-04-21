@@ -31,7 +31,7 @@ website:
         href: https://github.com/pmxlr8/DS_R_Geopolitics
         aria-label: GitHub
   page-footer:
-    left: "Built by Bhavesh Gupta · data from World Bank, FRED, UN Comtrade, IMF"
+    left: "Built by Pranjal Mishra · data from World Bank, FRED, UN Comtrade, IMF"
     right: "Last refresh: `r Sys.Date()`"
 
 format:

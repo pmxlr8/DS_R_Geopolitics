@@ -84,7 +84,7 @@ This is a **measurement** project, not a causal one. It does not claim the war c
 
 ## Author
 
-Built by **Bhavesh Gupta** ([@pmxlr8](https://github.com/pmxlr8)) as a portfolio piece for the NYU Stern Center for the Future of Management / DHL Initiative on Globalization *Student Employee – Data Science Support* role.
+Built by **Pranjal Mishra** ([@pmxlr8](https://github.com/pmxlr8)) as a portfolio piece for the NYU Stern Center for the Future of Management / DHL Initiative on Globalization *Student Employee – Data Science Support* role.
 
 ## License
 

@@ -1,7 +1,7 @@
 ---
 title: "Hormuz Shock Tracker"
 subtitle: "Reading the 2026 Iran–US war through the DHL Global Connectedness lens"
-author: "Bhavesh Gupta"
+author: "Pranjal Mishra"
 date: last-modified
 date-format: "D MMMM YYYY, HH:mm 'UTC'"
 format:
@@ -123,7 +123,7 @@ The rest of this page traces that shock through four measurements.
 > on the chart to zoom into any window. The dashed line marks the 28 Feb 2026
 > strikes.
 
-```{r chart-a}
+```{r}
 #| label: chart-a-spike
 p <- ggplot(prices, aes(x = date, y = value, color = series,
                         text = paste0(format(date, "%d %b %Y"),
@@ -159,7 +159,7 @@ were pricing not only the blockade but the probability it would resume.
 > Hormuz-adjacent crude; WTI prices US crude. When the spread widens, markets
 > are charging extra for geopolitical exposure.
 
-```{r chart-b}
+```{r}
 #| label: chart-b-spread
 spread <- prices |>
   pivot_wider(names_from = series, values_from = value) |>
@@ -199,7 +199,7 @@ geography-of-supply story exposed.
 > economies. **Use the checkboxes below** to filter to the countries you care
 > about.
 
-```{r chart-c}
+```{r}
 #| label: chart-c-rewiring
 #| column: page
 focus <- c("IRN", "SAU", "ARE", "TUR", "DEU", "CHN", "USA", "IND", "EUU")
@@ -247,7 +247,7 @@ shock does not hit everyone the same way; the chart makes *semi-globalization*
 > pre-war baseline**. Above zero = more connected than baseline; below zero =
 > decoupling underway.
 
-```{r chart-d}
+```{r}
 #| label: chart-d-score
 scored <- depth |>
   shock_score(baseline_start = 2018, baseline_end = 2022) |>
