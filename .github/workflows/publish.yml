@@ -56,6 +56,7 @@ jobs:
             any::scales
             any::plotly
             any::htmlwidgets
+            any::crosstalk
             any::knitr
             any::rmarkdown
 

@@ -17,11 +17,15 @@ trade_depth <- function(wdi_long) {
 }
 
 #' Shock score: z-score of a country's trade depth vs its own pre-war
-#' baseline (5-year mean/SD ending the year before the shock). Positive =
-#' more connected than baseline; negative = decoupling.
-shock_score <- function(depth_df, baseline_end = 2024, baseline_years = 5) {
+#' baseline. Baseline defaults to 2018–2022 — deliberately ends *before*
+#' the 2022 Ukraine shock's second-order effects dominate the window, so
+#' we're scoring "change since the last stable multi-year window" rather
+#' than "change within a window that already contains a shock."
+shock_score <- function(depth_df,
+                        baseline_start = 2018,
+                        baseline_end   = 2022) {
   baseline <- depth_df |>
-    dplyr::filter(year >= (baseline_end - baseline_years + 1), year <= baseline_end) |>
+    dplyr::filter(year >= baseline_start, year <= baseline_end) |>
     dplyr::group_by(iso3c) |>
     dplyr::summarise(
       base_mean = mean(trade_depth_pct, na.rm = TRUE),

@@ -28,22 +28,28 @@ computed directly from World Bank WDI indicator
 
 ## The shock score
 
-For each country we compute a baseline from the five years preceding the shock:
+For each country we compute a baseline over the 2018–2022 window:
 
 $$
-\mu_c = \overline{\text{depth}_{c, 2020..2024}}, \quad
-\sigma_c = \text{sd}(\text{depth}_{c, 2020..2024})
+\mu_c = \overline{\text{depth}_{c, 2018..2022}}, \quad
+\sigma_c = \text{sd}(\text{depth}_{c, 2018..2022})
 $$
 
-and score the latest observation as a z-score:
+and score the latest WDI observation as a z-score:
 
 $$
 z_{c,t} = \frac{\text{depth}_{c,t} - \mu_c}{\sigma_c}
 $$
 
 A positive z-score means the country is trading *more* relative to GDP than its
-pre-war normal; a negative score means structural pullback. The implementation
+2018–2022 normal; a negative score means structural pullback. The implementation
 is ~30 lines of R in [`R/connectedness.R`](https://github.com/pmxlr8/DS_R_Geopolitics/blob/main/R/connectedness.R).
+
+**Why 2018–2022?** The window is intentionally chosen to end *before* the
+second-order effects of the 2022 Ukraine shock begin to dominate annual trade
+statistics. Using 2020–2024 would embed a known shock inside the baseline and
+compress any new shock's z-score. 2018–2022 is the most recent five-year window
+that anchors on a relatively stable global-trade regime.
 
 ## Oil prices
 

@@ -9,8 +9,8 @@ required_pkgs <- c(
   "DBI", "duckdb", "dplyr", "tidyr", "readr", "purrr", "tibble", "stringr", "lubridate",
   # ingestion
   "WDI", "yaml",
-  # visualisation
-  "ggplot2", "scales", "plotly", "htmlwidgets",
+  # visualisation + interactivity
+  "ggplot2", "scales", "plotly", "htmlwidgets", "crosstalk",
   # publishing
   "knitr", "rmarkdown"
 )

@@ -3,7 +3,7 @@ title: "Hormuz Shock Tracker"
 subtitle: "Reading the 2026 Iran–US war through the DHL Global Connectedness lens"
 author: "Bhavesh Gupta"
 date: last-modified
-date-format: "D MMMM YYYY"
+date-format: "D MMMM YYYY, HH:mm 'UTC'"
 format:
   html:
     code-fold: true
@@ -24,15 +24,9 @@ abstract: |
 ```{r setup}
 #| include: false
 suppressPackageStartupMessages({
-  library(DBI)
-  library(duckdb)
-  library(dplyr)
-  library(tidyr)
-  library(ggplot2)
-  library(scales)
-  library(plotly)
-  library(readr)
-  library(lubridate)
+  library(DBI); library(duckdb); library(dplyr); library(tidyr)
+  library(ggplot2); library(scales); library(plotly); library(readr)
+  library(lubridate); library(crosstalk); library(htmltools)
 })
 source("R/db_helpers.R")
 source("R/connectedness.R")
@@ -40,23 +34,74 @@ source("R/connectedness.R")
 con <- db_connect(read_only = TRUE)
 
 events <- db_read(con, "SELECT * FROM events ORDER BY date")
-prices <- db_read(con, "SELECT * FROM v_price_shock ORDER BY date")
+prices <- db_read(con, "SELECT * FROM v_price_shock ORDER BY date") |>
+  mutate(date = as.Date(date))
 depth  <- db_read(con, "SELECT * FROM v_trade_depth ORDER BY iso3c, year")
 
-# War start marker used across charts.
 WAR_START <- as.Date("2026-02-28")
 
 theme_shock <- function() {
   theme_minimal(base_size = 13) +
-    theme(
-      plot.title    = element_text(face = "bold"),
-      plot.subtitle = element_text(color = "grey30"),
-      panel.grid.minor = element_blank(),
-      legend.position = "top",
-      legend.title    = element_blank()
-    )
+    theme(plot.title       = element_text(face = "bold"),
+          plot.subtitle    = element_text(color = "grey30"),
+          panel.grid.minor = element_blank(),
+          legend.position  = "top",
+          legend.title     = element_blank())
 }
+
+# Plotly renders `geom_vline(xintercept = as.numeric(date))` with a
+# time-zone offset on date axes — the line ends up half a day off. Using
+# plotly's native `shapes` layout primitive avoids the conversion entirely.
+war_shape <- list(
+  type = "line", xref = "x", yref = "paper",
+  x0 = WAR_START, x1 = WAR_START, y0 = 0, y1 = 1,
+  line = list(color = "rgba(80,80,80,0.6)", dash = "dash", width = 1.2)
+)
+war_annot <- list(
+  x = WAR_START, y = 1, xref = "x", yref = "paper",
+  text = "28 Feb 2026 · strikes", showarrow = FALSE,
+  xanchor = "left", yanchor = "top",
+  font = list(size = 10, color = "grey40")
+)
 ```
+
+```{r header-stats}
+#| echo: false
+latest_date  <- max(prices$date, na.rm = TRUE)
+latest_brent <- prices |> filter(series == "Brent", date == latest_date) |> pull(value)
+latest_wti   <- prices |> filter(series == "WTI",   date == latest_date) |> pull(value)
+latest_spread <- latest_brent - latest_wti
+days_since_war <- as.integer(Sys.Date() - WAR_START)
+render_ts <- format(Sys.time(), "%d %b %Y · %H:%M UTC", tz = "UTC")
+
+stat_box <- function(label, value, sub = NULL) {
+  div(style = "flex:1; padding:14px 18px; background:#f8f9fa; border-radius:8px; margin:4px;",
+    div(style = "font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#6c757d;", label),
+    div(style = "font-size:22px; font-weight:600; color:#212529; margin-top:4px;", value),
+    if (!is.null(sub)) div(style = "font-size:11px; color:#6c757d; margin-top:2px;", sub)
+  )
+}
+
+div(style = "display:flex; flex-wrap:wrap; margin:16px -4px 24px -4px;",
+  stat_box("Brent, latest",
+           sprintf("$%.2f / bbl", latest_brent),
+           sub = format(latest_date, "%d %b %Y")),
+  stat_box("Brent–WTI spread",
+           sprintf("$%.2f", latest_spread),
+           sub = "geopolitical risk premium"),
+  stat_box("Days since strikes",
+           sprintf("%d", days_since_war),
+           sub = "from 28 Feb 2026"),
+  stat_box("Site refreshed",
+           render_ts,
+           sub = "auto-rebuilt daily · 06:00 UTC")
+)
+```
+
+::: {.callout-note appearance="simple"}
+Data auto-refreshes daily via [GitHub Actions](https://github.com/pmxlr8/DS_R_Geopolitics/actions).
+Every figure pulls live from World Bank WDI and FRED; source badges sit under each chart.
+:::
 
 ## The shock, in one paragraph
 
@@ -64,9 +109,9 @@ Crude oil traded near $70 a barrel before the strikes. By 8 March 2026, Brent
 broke $100 for the first time in four years; during the blockade peak it spiked
 above $119. The IMF cut its 2026 MENA growth forecast from 3.9% to 1.1% and
 warned that continued escalation could push the global economy into recession.
-As of this writing (`r format(Sys.Date(), "%e %B %Y")`), the two-week
-US–Iran–Israel ceasefire signed on 7 April is fraying: Iran has cancelled the
-reopening of the Strait, and the US blockade of Iranian ports remains in force.
+The US–Iran–Israel ceasefire signed on 7 April has been fraying: Iran cancelled
+the reopening of the Strait on 17 April and the US blockade of Iranian ports
+remains in force.
 
 The rest of this page traces that shock through four measurements.
 
@@ -74,24 +119,17 @@ The rest of this page traces that shock through four measurements.
 
 ## Chart A — The spike
 
-> Daily WTI and Brent spot prices, with hand-curated war-timeline annotations.
-> The question this chart answers: *how fast did markets price the shock, and
-> how does this spike compare to earlier episodes on the same window?*
+> Daily WTI and Brent spot prices. Use the legend to isolate a series, or drag
+> on the chart to zoom into any window. The dashed line marks the 28 Feb 2026
+> strikes.
 
 ```{r chart-a}
 #| label: chart-a-spike
-#| fig-cap: "WTI and Brent spot prices, 2022-present. Dashed line marks the 28 Feb 2026 strikes."
-
-market_events <- events |>
-  filter(category %in% c("kinetic", "markets", "diplomacy"),
-         date >= as.Date("2026-02-01")) |>
-  arrange(date) |>
-  slice_head(n = 6)
-
-p <- ggplot(prices, aes(x = date, y = usd_per_bbl, color = series)) +
-  geom_line(linewidth = 0.6) +
-  geom_vline(xintercept = as.numeric(WAR_START),
-             linetype = "dashed", color = "grey40") +
+p <- ggplot(prices, aes(x = date, y = value, color = series,
+                        text = paste0(format(date, "%d %b %Y"),
+                                      "<br>", series, ": $",
+                                      format(round(value, 2), nsmall = 2), "/bbl"))) +
+  geom_line(aes(group = series), linewidth = 0.6) +
   scale_y_continuous(labels = dollar_format(suffix = "/bbl")) +
   scale_color_manual(values = c(WTI = "#2C7FB8", Brent = "#D95F02")) +
   labs(title = "Oil prices: the 2026 Iran-war spike",
@@ -99,16 +137,19 @@ p <- ggplot(prices, aes(x = date, y = usd_per_bbl, color = series)) +
        x = NULL, y = NULL) +
   theme_shock()
 
-ggplotly(p, tooltip = c("x", "y", "colour")) |>
-  layout(legend = list(orientation = "h", y = 1.05))
+ggplotly(p, tooltip = "text") |>
+  layout(shapes = list(war_shape), annotations = list(war_annot),
+         legend = list(orientation = "h", y = 1.08),
+         hovermode = "x unified")
 ```
 
-The picture tells two stories. The first is the sheer speed: Brent added roughly
-forty dollars in the first six trading sessions of March — faster than after
-Russia's 2022 invasion of Ukraine on the same axis. The second is the tail:
-prices remained above the pre-war range into the April ceasefire, indicating
-that markets were pricing not only the blockade but the probability it would
-resume.
+*Source: FRED — [`DCOILWTICO`](https://fred.stlouisfed.org/series/DCOILWTICO), [`DCOILBRENTEU`](https://fred.stlouisfed.org/series/DCOILBRENTEU) · daily refresh*
+
+The picture tells two stories. The first is speed: Brent added roughly forty
+dollars in the first six trading sessions of March — faster than after Russia's
+2022 invasion of Ukraine on the same axis. The second is the tail: prices
+remained above the pre-war range into the April ceasefire, suggesting markets
+were pricing not only the blockade but the probability it would resume.
 
 ---
 
@@ -120,68 +161,75 @@ resume.
 
 ```{r chart-b}
 #| label: chart-b-spread
-#| fig-cap: "Brent minus WTI spot spread, USD/bbl. A widening spread = a wider risk premium on Hormuz-adjacent crude."
-
 spread <- prices |>
-  pivot_wider(names_from = series, values_from = usd_per_bbl) |>
+  pivot_wider(names_from = series, values_from = value) |>
   filter(!is.na(Brent), !is.na(WTI)) |>
   mutate(spread = Brent - WTI)
 
-p <- ggplot(spread, aes(x = date, y = spread)) +
+p <- ggplot(spread, aes(x = date, y = spread,
+                        text = paste0(format(date, "%d %b %Y"),
+                                      "<br>spread: $",
+                                      format(round(spread, 2), nsmall = 2)))) +
   geom_hline(yintercept = 0, color = "grey70") +
-  geom_line(color = "#7B3294", linewidth = 0.6) +
-  geom_vline(xintercept = as.numeric(WAR_START),
-             linetype = "dashed", color = "grey40") +
+  geom_line(aes(group = 1), color = "#7B3294", linewidth = 0.6) +
   scale_y_continuous(labels = dollar_format(suffix = "/bbl")) +
   labs(title = "The geopolitical risk premium",
        subtitle = "Brent minus WTI, daily",
        x = NULL, y = NULL) +
   theme_shock()
 
-ggplotly(p, tooltip = c("x", "y"))
+ggplotly(p, tooltip = "text") |>
+  layout(shapes = list(war_shape), annotations = list(war_annot),
+         hovermode = "x unified")
 ```
 
-A normal Brent-WTI spread sits in the low single digits, reflecting quality and
+*Source: derived from FRED Brent and WTI daily spots.*
+
+A normal Brent–WTI spread sits in the low single digits, reflecting quality and
 logistics. During the 2026 shock it widened sharply as Hormuz-adjacent supply
 became harder to replace. For policymakers the spread is a cleaner read than
-the absolute price, because it strips out demand-side noise and leaves the
+the absolute price — it strips out demand-side noise and leaves the
 geography-of-supply story exposed.
 
 ---
 
-## Chart C — The rewiring
+## Chart C — The rewiring (interactive)
 
 > Trade depth (exports + imports as a share of GDP) for a panel of major
-> economies. A Ghemawat-style connectedness question: *who is most exposed,
-> structurally, to a Middle East chokepoint?*
+> economies. **Use the checkboxes below** to filter to the countries you care
+> about.
 
 ```{r chart-c}
 #| label: chart-c-rewiring
-#| fig-cap: "Trade (% of GDP), 2000-2024. Source: World Bank WDI indicator NE.TRD.GNFS.ZS."
-
+#| column: page
 focus <- c("IRN", "SAU", "ARE", "TUR", "DEU", "CHN", "USA", "IND", "EUU")
 
-panel <- depth |>
-  filter(iso3c %in% focus) |>
-  mutate(country = factor(country,
-                          levels = c("Iran, Islamic Rep.", "Saudi Arabia",
-                                     "United Arab Emirates", "Turkiye",
-                                     "Germany", "China", "United States",
-                                     "India", "European Union")))
+panel <- depth |> filter(iso3c %in% focus)
 
-p <- ggplot(panel, aes(x = year, y = trade_depth_pct,
-                       color = country, group = country)) +
-  geom_line(linewidth = 0.6) +
-  scale_y_continuous(labels = percent_format(scale = 1)) +
+sd_panel <- SharedData$new(panel, key = ~country, group = "ctry_filter")
+
+p <- ggplot(sd_panel,
+            aes(x = year, y = trade_depth_pct, color = country, group = country,
+                text = paste0(country, " · ", year,
+                              "<br>trade depth: ",
+                              format(round(trade_depth_pct, 1), nsmall = 1), "%"))) +
+  geom_line(linewidth = 0.7) +
+  scale_y_continuous(labels = label_percent(scale = 1)) +
   scale_color_brewer(palette = "Set1") +
   labs(title = "Trade depth by economy, 2000–2024",
-       subtitle = "Trade (goods + services) as % of GDP",
+       subtitle = "Trade (goods + services) as % of GDP · click a country to isolate",
        x = NULL, y = NULL) +
   theme_shock() +
-  theme(legend.position = "right", legend.title = element_blank())
+  theme(legend.position = "right")
 
-ggplotly(p, tooltip = c("x", "y", "colour"))
+bscols(
+  widths = c(3, 9),
+  filter_checkbox("ctry", "Filter countries", sd_panel, ~country, inline = FALSE),
+  ggplotly(p, tooltip = "text") |> layout(hovermode = "closest")
+)
 ```
+
+*Source: World Bank WDI indicator [`NE.TRD.GNFS.ZS`](https://data.worldbank.org/indicator/NE.TRD.GNFS.ZS) · annual refresh.*
 
 Three groups sit in different positions on this chart. Gulf economies (UAE,
 Saudi Arabia) trade at 60–200% of GDP — their exposure is structural. Large
@@ -195,51 +243,63 @@ shock does not hit everyone the same way; the chart makes *semi-globalization*
 
 ## Chart D — The connectedness score
 
-> A z-score of each economy's most recent trade depth against its own pre-war
-> baseline (five-year mean ending 2024). Above zero = more connected than
-> baseline; below zero = decoupling underway.
+> A z-score of each economy's latest trade depth against its own **2018–2022
+> pre-war baseline**. Above zero = more connected than baseline; below zero =
+> decoupling underway.
 
 ```{r chart-d}
 #| label: chart-d-score
-#| fig-cap: "Connectedness shock score (z-score vs. 2020–2024 baseline)."
-
 scored <- depth |>
-  shock_score(baseline_end = 2024, baseline_years = 5) |>
-  filter(iso3c %in% focus, year == max(year)) |>
+  shock_score(baseline_start = 2018, baseline_end = 2022) |>
+  filter(iso3c %in% focus) |>
+  group_by(iso3c) |>
+  filter(year == max(year[!is.na(shock_z)])) |>
+  ungroup() |>
+  filter(!is.na(shock_z)) |>
   arrange(shock_z) |>
   mutate(country = factor(country, levels = country))
 
-p <- ggplot(scored, aes(x = country, y = shock_z,
-                        fill = shock_z > 0)) +
+p <- ggplot(scored,
+            aes(x = country, y = shock_z, fill = shock_z > 0,
+                text = paste0(country,
+                              "<br>year scored: ", year,
+                              "<br>z-score: ",
+                              format(round(shock_z, 2), nsmall = 2),
+                              "<br>baseline mean: ",
+                              format(round(base_mean, 1), nsmall = 1), "%"))) +
   geom_col() +
   scale_fill_manual(values = c(`TRUE` = "#2C7FB8", `FALSE` = "#D95F02"),
                     guide = "none") +
   coord_flip() +
-  labs(title = "Who is above or below their pre-war connectedness baseline?",
-       subtitle = "Standard deviations from 2020–2024 trade-depth mean, latest WDI year",
+  labs(title = "Who is above or below their 2018–2022 connectedness baseline?",
+       subtitle = "Standard deviations from 2018–2022 trade-depth mean, latest WDI year",
        x = NULL, y = "z-score") +
   theme_shock()
 
-ggplotly(p, tooltip = c("x", "y"))
+ggplotly(p, tooltip = "text")
 ```
+
+*Source: derived from WDI indicator [`NE.TRD.GNFS.ZS`](https://data.worldbank.org/indicator/NE.TRD.GNFS.ZS); methodology on [this page](pages/methodology.qmd).*
 
 The bar chart compresses the four-chart story into one line-per-country read.
 Economies pushed below zero are already registering a structural pullback from
-trade. Those above zero are either late to reflect the shock in annual data or
-benefiting from reconfiguration (e.g., transshipment winners).
+trade relative to their 2018–2022 average. Those above zero are either late to
+reflect the shock in annual data or benefiting from reconfiguration (e.g.,
+transshipment winners). Because WDI data is annual, the post-February-2026
+effects will not appear here in full until the 2026 release lands — another
+reason the oil-market charts above carry the near-real-time signal.
 
 ---
 
 ## Timeline
 
-The event annotations used throughout this page are loaded from a
-version-controlled YAML file (`data/events.yml`) so the war itself is
-diff-able in git. Full table below.
+Event annotations throughout this page are loaded from a version-controlled
+YAML file (`data/events.yml`) so the war itself is diff-able in git.
 
 ```{r timeline}
 #| echo: false
 events |>
-  mutate(date = format(date, "%Y-%m-%d")) |>
+  mutate(date = format(as.Date(date), "%Y-%m-%d")) |>
   select(date, category, label, source) |>
   knitr::kable(col.names = c("Date", "Category", "Event", "Source"))
 ```
