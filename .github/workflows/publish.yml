@@ -8,13 +8,21 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
+# Required by actions/deploy-pages — deploys via GitHub's native Pages
+# pipeline rather than pushing to a gh-pages branch.
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -25,18 +33,34 @@ jobs:
         with:
           use-public-rspm: true
 
+      - name: Install R package dependencies
+        # setup-r-dependencies pulls pre-compiled binaries from Posit's
+        # Public Package Manager and installs the required system libs
+        # (libpng, libcurl, etc.) via sysreqs. ~10× faster than source
+        # compilation and the reason the manual setup.R was timing out.
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::DBI
+            any::duckdb
+            any::dplyr
+            any::tidyr
+            any::readr
+            any::purrr
+            any::tibble
+            any::stringr
+            any::lubridate
+            any::WDI
+            any::yaml
+            any::ggplot2
+            any::scales
+            any::plotly
+            any::htmlwidgets
+            any::knitr
+            any::rmarkdown
+
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
-
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: r-${{ runner.os }}-${{ hashFiles('setup.R') }}
-          restore-keys: r-${{ runner.os }}-
-
-      - name: Install R dependencies
-        run: Rscript setup.R
 
       - name: Build DuckDB warehouse
         run: Rscript build_db.R
@@ -53,10 +77,18 @@ jobs:
           git diff --quiet --cached || git commit -m "chore: refresh data snapshots [skip ci]"
           git push
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          publish_branch: gh-pages
-          force_orphan: true
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
